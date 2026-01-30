@@ -1,0 +1,4 @@
+-The Excel files in this folder show actual historical production.
+-Filename format: [The date of production] DAILY_PRODUCTION_LOAD Actual.xlsx
+-When running the schedule using the [The date of production] as "today".
+-These files are intended to show what was actually produced in an 8 hour day, summer curing = false, all tables but ORANGE are used.

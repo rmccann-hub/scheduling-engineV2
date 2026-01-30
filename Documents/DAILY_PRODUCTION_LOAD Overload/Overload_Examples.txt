@@ -1,0 +1,5 @@
+-The Excel files in this folder show actual historical production, with 5 random jobs added to "overload" the schedule. This is to test how the scheduling engine handles this scenario.
+-We do not know if it is possible to run all of this production in 1 shift. Maybe it is, maybe not, this is a stress test and also a test to see if this scheduling engine is more efficient that a human.
+-Filename format: [The date of production] DAILY_PRODUCTION_LOAD Increased.xlsx
+-When running the schedule using the [The date of production] as "today".
+-These files are intended to stress test the scheduling engine. Alternate testing with a normal day and overtime, summer curing = true or false, and orange table on and off.

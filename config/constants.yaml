@@ -1,0 +1,388 @@
+# Cell Scheduling Engine - Cycle Time Constants
+# This file contains all configurable parameters for the scheduling engine
+# Edit via the web UI Settings page (password protected)
+
+# Admin password for settings page (change this!)
+admin_password: "schedule123"
+
+# Shift durations in minutes
+shifts:
+  standard: 440
+  overtime: 500
+
+# Summer mode multiplier for CURE times
+summer_cure_multiplier: 1.5
+
+# Minimum minutes remaining to start POUR
+pour_cutoff_minutes: 40
+
+# Maximum gap between LAYOUT end and POUR start (minutes)
+max_layout_pour_gap: 60
+
+# Task timing constants by wire diameter and equivalent
+# WIRE_DIAMETER: condition for mold wire diameter
+# EQUIVALENT: difficulty factor (1.0, 1.25, 1.5, 1.75, >=2)
+# Times are in minutes, POUR is per-mold
+task_timings:
+  - wire_diameter: "<=4"
+    equivalent: 1.0
+    setup: 10
+    layout: 20
+    pour_per_mold: 1
+    cure: 18
+    unload: 5
+    sched_constant: 10
+    sched_class: "A"
+    pull_ahead: 0.5
+
+  - wire_diameter: "<=4"
+    equivalent: 1.25
+    setup: 10
+    layout: 25
+    pour_per_mold: 1
+    cure: 18
+    unload: 5
+    sched_constant: 10
+    sched_class: "A"
+    pull_ahead: 0.5
+
+  - wire_diameter: "<=4"
+    equivalent: 1.5
+    setup: 10
+    layout: 40
+    pour_per_mold: 1
+    cure: 18
+    unload: 5
+    sched_constant: 10
+    sched_class: "B"
+    pull_ahead: 0.75
+
+  - wire_diameter: "<=4"
+    equivalent: 1.75
+    setup: 10
+    layout: 50
+    pour_per_mold: 1
+    cure: 18
+    unload: 5
+    sched_constant: 8
+    sched_class: "C"
+    pull_ahead: 1.0
+
+  - wire_diameter: "<=4"
+    equivalent: ">=2"
+    setup: 10
+    layout: 60
+    pour_per_mold: 1
+    cure: 18
+    unload: 5
+    sched_constant: 8
+    sched_class: "C"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">4,<8"
+    equivalent: 1.0
+    setup: 8
+    layout: 12
+    pour_per_mold: 3.5
+    cure: 24
+    unload: 10
+    sched_constant: 6
+    sched_class: "D"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">4,<8"
+    equivalent: 1.25
+    setup: 8
+    layout: 12
+    pour_per_mold: 3.5
+    cure: 24
+    unload: 10
+    sched_constant: 6
+    sched_class: "D"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">4,<8"
+    equivalent: 1.5
+    setup: 8
+    layout: 12
+    pour_per_mold: 3.5
+    cure: 24
+    unload: 10
+    sched_constant: 6
+    sched_class: "D"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">4,<8"
+    equivalent: 1.75
+    setup: 10
+    layout: 12
+    pour_per_mold: 3.5
+    cure: 24
+    unload: 10
+    sched_constant: 6
+    sched_class: "D"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">4,<8"
+    equivalent: ">=2"
+    setup: 10
+    layout: 12
+    pour_per_mold: 3.5
+    cure: 24
+    unload: 10
+    sched_constant: 6
+    sched_class: "D"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">=8"
+    equivalent: 1.0
+    setup: 8
+    layout: 6
+    pour_per_mold: 6
+    cure: 36
+    unload: 12
+    sched_constant: 5
+    sched_class: "E"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">=8"
+    equivalent: 1.25
+    setup: 8
+    layout: 6
+    pour_per_mold: 6
+    cure: 36
+    unload: 12
+    sched_constant: 5
+    sched_class: "E"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">=8"
+    equivalent: 1.5
+    setup: 10
+    layout: 6
+    pour_per_mold: 6
+    cure: 36
+    unload: 12
+    sched_constant: 5
+    sched_class: "E"
+    pull_ahead: 1.0
+
+  - wire_diameter: ">=8"
+    equivalent: 1.75
+    setup: 10
+    layout: 6
+    pour_per_mold: 6
+    cure: 36
+    unload: 12
+    sched_constant: 5
+    sched_class: "E"
+    pull_ahead: 2.0
+
+  - wire_diameter: ">=8"
+    equivalent: ">=2"
+    setup: 10
+    layout: 6
+    pour_per_mold: 6
+    cure: 36
+    unload: 12
+    sched_constant: 5
+    sched_class: "E"
+    pull_ahead: 2.0
+
+# Mold inventory and cell compliance
+# MOLD_DEPTH: DEEP (>=8 wire) or STD (<8 wire)
+# Cell compliance indicates which cells can use the mold
+molds:
+  - name: "DEEP_MOLD"
+    depth: "DEEP"
+    wire_diameter: ">=8"
+    quantity: 12
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "DEEP_DOUBLE2CC_MOLD"
+    depth: "DEEP"
+    wire_diameter: ">=8"
+    quantity: 1
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "RED_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 12
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "BLUE_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 12
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "GREEN_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 12
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "BLACK_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 12
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "PURPLE_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 12
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "ORANGE_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 30
+    cells:
+      RED: false
+      BLUE: false
+      GREEN: false
+      BLACK: false
+      PURPLE: false
+      ORANGE: true
+
+  - name: "COMMON_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 4
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "DOUBLE2CC_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 3
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+  - name: "3INURETHANE_MOLD"
+    depth: "STD"
+    wire_diameter: "<8"
+    quantity: 2
+    cells:
+      RED: true
+      BLUE: true
+      GREEN: true
+      BLACK: true
+      PURPLE: true
+      ORANGE: false
+
+# Fixture patterns and quantities
+fixtures:
+  - pattern: "D"
+    description: "Diamond"
+    quantity: 4
+
+  - pattern: "S"
+    description: "Staggered"
+    quantity: 3
+
+  - pattern: "V"
+    description: "Vee"
+    quantity: 2
+
+  - pattern: "W"
+    description: "Wave"
+    quantity: 4
+
+# Company holidays/closures (scheduling skips these dates)
+# Format: YYYY-MM-DD
+# User can remove unneeded holidays
+holidays:
+  # Q1 2026
+  - label: "New Year's Day"
+    date: "2026-01-01"
+
+  - label: "Martin Luther King Jr. Day"
+    date: "2026-01-19"
+
+  - label: "Presidents Day"
+    date: "2026-02-16"
+
+  # Q2 2026
+  - label: "Good Friday"
+    date: "2026-04-03"
+
+  - label: "Memorial Day"
+    date: "2026-05-25"
+
+  # Q3 2026
+  - label: "Independence Day (observed)"
+    date: "2026-07-03"
+
+  - label: "Labor Day"
+    date: "2026-09-07"
+
+  # Q4 2026
+  - label: "Thanksgiving"
+    date: "2026-11-26"
+
+  - label: "Day after Thanksgiving"
+    date: "2026-11-27"
+
+  - label: "Christmas Eve"
+    date: "2026-12-24"
+
+  - label: "Christmas Day"
+    date: "2026-12-25"
+
+  - label: "Winter Break"
+    date: "2026-12-28"

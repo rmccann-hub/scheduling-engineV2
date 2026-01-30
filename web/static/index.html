@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cell Scheduling Engine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
+        
+        .header { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 22px; }
+        
+        .main-tabs { display: flex; background: #34495e; }
+        .main-tab { padding: 12px 24px; color: #bdc3c7; cursor: pointer; border: none; background: none; font-size: 14px; font-weight: 500; }
+        .main-tab:hover { background: rgba(255,255,255,0.1); }
+        .main-tab.active { background: #f5f7fa; color: #2c3e50; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Scheduler Tab Styles */
+        .scheduler-container { display: grid; grid-template-columns: 360px 1fr; gap: 20px; padding: 20px; max-width: 1600px; }
+        .sidebar { display: flex; flex-direction: column; gap: 15px; }
+        .card { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #2c3e50; border-left: 3px solid #3498db; padding-left: 10px; }
+        
+        .upload-zone { border: 2px dashed #ddd; border-radius: 8px; padding: 25px; text-align: center; cursor: pointer; background: #f8f9fa; }
+        .upload-zone:hover { border-color: #3498db; background: #e8f4fc; }
+        .upload-zone p { color: #666; font-size: 13px; }
+        .upload-status { margin-top: 10px; padding: 8px; border-radius: 5px; font-size: 12px; }
+        .upload-status.success { background: #e8f5e9; color: #2e7d32; }
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 5px; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+        
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 6px; }
+        .checkbox-item { display: flex; align-items: center; gap: 5px; padding: 6px 10px; background: #f8f9fa; border-radius: 5px; font-size: 12px; cursor: pointer; }
+        .checkbox-item.cell-RED { border-left: 3px solid #e74c3c; }
+        .checkbox-item.cell-BLUE { border-left: 3px solid #3498db; }
+        .checkbox-item.cell-GREEN { border-left: 3px solid #27ae60; }
+        .checkbox-item.cell-BLACK { border-left: 3px solid #2c3e50; }
+        .checkbox-item.cell-PURPLE { border-left: 3px solid #9b59b6; }
+        .checkbox-item.cell-ORANGE { border-left: 3px solid #e67e22; }
+        
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-primary { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; width: 100%; }
+        .btn-primary:hover { box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4); }
+        .btn-primary:disabled { background: #bdc3c7; }
+        .btn-secondary { background: #f8f9fa; color: #333; border: 1px solid #ddd; }
+        
+        .jobs-list { max-height: 400px; overflow-y: auto; }
+        .job-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 12px; }
+        .job-item.has-settings { background: #f0f8ff; border-left: 3px solid #3498db; }
+        .job-settings { margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; display: none; }
+        .job-settings.visible { display: block; }
+        .job-settings-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+        .job-settings-row:last-child { margin-bottom: 0; }
+        .job-settings label { font-size: 11px; color: #555; display: flex; align-items: center; gap: 4px; }
+        .job-settings select, .job-settings input[type="number"] { padding: 4px 6px; font-size: 11px; border: 1px solid #ddd; border-radius: 4px; }
+        .job-settings select { min-width: 100px; }
+        .job-settings input[type="number"] { width: 70px; }
+        .job-toggle-btn { background: none; border: none; color: #3498db; cursor: pointer; font-size: 11px; padding: 2px 5px; }
+        .job-toggle-btn:hover { text-decoration: underline; }
+        .job-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .job-id { font-weight: 600; }
+        .job-priority { font-size: 10px; padding: 2px 6px; border-radius: 8px; }
+        .priority-0 { background: #ffebee; color: #c62828; }
+        .priority-1 { background: #fff3e0; color: #ef6c00; }
+        .priority-2 { background: #e8f5e9; color: #2e7d32; }
+        .priority-3 { background: #e3f2fd; color: #1565c0; }
+        
+        .content-area { display: flex; flex-direction: column; gap: 15px; }
+        .results-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .stats-row { display: flex; gap: 10px; }
+        .stat-card { background: white; padding: 12px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); min-width: 120px; }
+        .stat-card .label { font-size: 10px; color: #888; text-transform: uppercase; }
+        .stat-card .value { font-size: 24px; font-weight: 700; color: #2c3e50; }
+        .stat-card.highlight { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .stat-card.highlight .label, .stat-card.highlight .value { color: white; }
+        
+        .gantt-container { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); overflow-x: auto; }
+        .gantt-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .gantt-legend { display: flex; gap: 12px; font-size: 11px; }
+        .legend-item { display: flex; align-items: center; gap: 4px; }
+        .legend-color { width: 14px; height: 10px; border-radius: 2px; }
+        
+        .gantt-cell { margin-bottom: 15px; }
+        .gantt-cell-header { font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+        .gantt-row { display: flex; align-items: center; margin-bottom: 5px; }
+        .gantt-row-label { width: 70px; font-size: 11px; color: #666; }
+        .gantt-row-bar { flex: 1; height: 24px; background: #f0f0f0; border-radius: 3px; position: relative; }
+        .gantt-task { position: absolute; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; font-weight: 500; cursor: pointer; }
+        .time-axis { display: flex; margin-left: 70px; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+        .time-marker { font-size: 10px; color: #888; position: absolute; }
+        
+        .comparison-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .comparison-table th { background: #f8f9fa; padding: 10px; text-align: left; font-weight: 600; }
+        .comparison-table td { padding: 10px; border-bottom: 1px solid #eee; }
+        .comparison-table .best-row { background: #e8f5e9; }
+        .status-badge { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; }
+        .status-OPTIMAL { background: #e8f5e9; color: #2e7d32; }
+        .status-PARTIAL { background: #fff3e0; color: #ef6c00; }
+        
+        .loading { display: none; align-items: center; justify-content: center; gap: 10px; padding: 30px; color: #666; }
+        .loading.active { display: flex; }
+        .spinner { width: 20px; height: 20px; border: 2px solid #f0f0f0; border-top-color: #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .empty-state { text-align: center; padding: 40px; color: #888; }
+        .tooltip { position: absolute; background: #2c3e50; color: white; padding: 6px 10px; border-radius: 5px; font-size: 11px; pointer-events: none; z-index: 1000; }
+        .alert { padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+        .alert-warning { background: #fff3e0; color: #e65100; }
+        
+        /* Settings Tab Styles */
+        .settings-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .settings-locked { text-align: center; padding: 60px 20px; }
+        .settings-locked h2 { margin-bottom: 20px; color: #2c3e50; }
+        .password-form { max-width: 300px; margin: 0 auto; }
+        .password-form input { margin-bottom: 15px; }
+        
+        .settings-tabs { display: flex; gap: 5px; margin-bottom: 20px; background: white; padding: 8px; border-radius: 8px; }
+        .settings-tab { padding: 10px 20px; border: none; background: none; cursor: pointer; border-radius: 6px; font-size: 13px; font-weight: 500; color: #666; }
+        .settings-tab:hover { background: #f0f0f0; }
+        .settings-tab.active { background: #3498db; color: white; }
+        
+        .settings-panel { display: none; }
+        .settings-panel.active { display: block; }
+        
+        .settings-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .settings-card h3 { font-size: 16px; margin-bottom: 15px; color: #2c3e50; }
+        
+        .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .settings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .settings-table th { background: #f8f9fa; padding: 10px; text-align: left; font-weight: 600; position: sticky; top: 0; }
+        .settings-table td { padding: 8px; border-bottom: 1px solid #eee; }
+        .settings-table input, .settings-table select { width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+        .settings-table input[type="checkbox"] { width: auto; }
+        
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-save { background: #27ae60; color: white; }
+        .btn-save:hover { background: #219a52; }
+        .btn-add { background: #3498db; color: white; padding: 6px 12px; font-size: 12px; }
+        .btn-delete { background: #e74c3c; color: white; padding: 4px 8px; font-size: 11px; cursor: pointer; border: none; border-radius: 4px; }
+        
+        .table-wrapper { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; }
+        
+        /* Method button styles */
+        .method-btn { 
+            padding: 8px 14px; 
+            border: 2px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 11px; 
+            cursor: pointer; 
+            background: white;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            min-width: 140px;
+        }
+        .method-btn:hover { border-color: #3498db; background: #f0f8ff; }
+        .method-btn.active { border-color: #3498db; background: #e8f4fc; box-shadow: 0 0 0 3px rgba(52,152,219,0.2); }
+        .method-btn.best { border-color: #27ae60; }
+        .method-btn .method-name { font-weight: 600; }
+        .method-btn .method-panels { font-size: 10px; color: #666; }
+        .method-btn .best-badge { background: #27ae60; color: white; font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-top: 2px; }
+        
+        .comparison-table tr { cursor: pointer; }
+        .comparison-table tr:hover { background: #f0f8ff; }
+        .comparison-table tr.selected { background: #e8f4fc; }
+        .view-btn { background: #3498db; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+        .view-btn:hover { background: #2980b9; }
+        
+        @media (max-width: 1024px) { .scheduler-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Cell Scheduling Engine</h1>
+        <span id="version-info"></span>
+    </header>
+
+    <nav class="main-tabs">
+        <button class="main-tab active" onclick="showMainTab('scheduler')">Scheduler</button>
+        <button class="main-tab" onclick="showMainTab('settings')">Settings</button>
+    </nav>
+
+    <!-- SCHEDULER TAB -->
+    <div id="scheduler-tab" class="tab-content active">
+        <div class="scheduler-container">
+            <aside class="sidebar">
+                <div class="card">
+                    <h2>Daily Production Load</h2>
+                    <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+                        <p>Click or drag to upload Excel file</p>
+                    </div>
+                    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFileUpload(this.files[0])">
+                    <div id="upload-status"></div>
+                </div>
+
+                <div class="card">
+                    <h2>Configuration</h2>
+                    <div class="form-group">
+                        <label>Schedule Date</label>
+                        <input type="date" id="schedule-date">
+                    </div>
+                    <div class="form-group">
+                        <label>Active Cells</label>
+                        <div class="checkbox-group" id="cells-group"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Shift Type</label>
+                        <select id="shift-type"></select>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="summer-mode"> Summer Mode (1.5x CURE multiplier)</label>
+                    </div>
+                    <button class="btn btn-primary" id="run-btn" onclick="runSchedule()">Run Scheduler</button>
+                </div>
+
+                <div class="card">
+                    <h2>Jobs (<span id="jobs-count">0</span>)</h2>
+                    <div class="jobs-list" id="jobs-list">
+                        <div class="empty-state">Upload a file to see jobs</div>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="content-area">
+                <div class="results-header" id="results-header" style="display:none">
+                    <div class="stats-row">
+                        <div class="stat-card highlight"><div class="label">Total Panels</div><div class="value" id="stat-panels">0</div></div>
+                        <div class="stat-card"><div class="label">Jobs Scheduled</div><div class="value" id="stat-jobs">0</div></div>
+                        <div class="stat-card"><div class="label">Current Method</div><div class="value" id="stat-method" style="font-size:14px">-</div></div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn btn-secondary" onclick="downloadFile('html')">All Gantt (HTML)</button>
+                        <button class="btn btn-secondary" onclick="downloadFile('report')">Summary PDF</button>
+                        <button class="btn btn-secondary" onclick="downloadFile('debug-excel')">Debug Excel</button>
+                        <span style="border-left:1px solid #ddd;margin:0 5px"></span>
+                        <span style="font-size:12px;color:#666;align-self:center">Cell PDFs:</span>
+                        <div id="cell-pdf-buttons" style="display:flex;gap:5px"></div>
+                    </div>
+                </div>
+                
+                <!-- Method Selection Buttons -->
+                <div class="card" id="method-buttons-card" style="display:none">
+                    <h2 style="border:none;padding:0;margin-bottom:10px">Select Scheduling Method</h2>
+                    <p style="font-size:12px;color:#666;margin-bottom:12px">Click a method to view its results. <span style="background:#27ae60;color:white;padding:2px 6px;border-radius:3px;font-size:10px">BEST</span> indicates highest panel count.</p>
+                    <div id="method-buttons" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+                </div>
+
+                <div class="card gantt-container">
+                    <div class="gantt-header">
+                        <h2 style="border:none;padding:0">Gantt Chart</h2>
+                        <div class="gantt-legend">
+                            <div class="legend-item"><div class="legend-color" style="background:#FF6B6B"></div>SETUP</div>
+                            <div class="legend-item"><div class="legend-color" style="background:#4ECDC4"></div>LAYOUT</div>
+                            <div class="legend-item"><div class="legend-color" style="background:#45B7D1"></div>POUR</div>
+                            <div class="legend-item"><div class="legend-color" style="background:#96CEB4"></div>CURE</div>
+                            <div class="legend-item"><div class="legend-color" style="background:#FFEAA7"></div>UNLOAD</div>
+                        </div>
+                    </div>
+                    <div id="gantt-loading" class="loading"><div class="spinner"></div>Running scheduler...</div>
+                    <div id="gantt-empty" class="empty-state">Upload production load and click Run Scheduler</div>
+                    <div class="gantt-chart" id="gantt-chart" style="display:none"></div>
+                </div>
+
+                <div class="alert alert-warning" id="unscheduled-alert" style="display:none">
+                    <strong>Unscheduled jobs:</strong> <span id="unscheduled-list"></span>
+                </div>
+
+                <div class="card" id="comparison-card" style="display:none">
+                    <h2 style="border:none;padding:0">Method Comparison</h2>
+                    <table class="comparison-table">
+                        <thead><tr><th>Method</th><th>Variant</th><th>Status</th><th>Panels</th><th>Jobs</th><th>Action</th></tr></thead>
+                        <tbody id="comparison-body"></tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="settings-tab" class="tab-content">
+        <div class="settings-container">
+            <div id="settings-locked" class="settings-locked">
+                <h2>&#128274; Settings Protected</h2>
+                <p style="margin-bottom:20px;color:#666">Enter password to access configuration settings</p>
+                <div class="password-form">
+                    <input type="password" id="settings-password" placeholder="Password" class="form-group">
+                    <button class="btn btn-primary" onclick="unlockSettings()">Unlock Settings</button>
+                </div>
+                <p id="password-error" style="color:#e74c3c;margin-top:10px;display:none">Invalid password</p>
+            </div>
+
+            <div id="settings-unlocked" style="display:none">
+                <div class="settings-tabs">
+                    <button class="settings-tab active" onclick="showSettingsTab('general')">General</button>
+                    <button class="settings-tab" onclick="showSettingsTab('tasks')">Task Timings</button>
+                    <button class="settings-tab" onclick="showSettingsTab('molds')">Molds</button>
+                    <button class="settings-tab" onclick="showSettingsTab('fixtures')">Fixtures</button>
+                    <button class="settings-tab" onclick="showSettingsTab('holidays')">Holidays</button>
+                </div>
+
+                <!-- General Settings -->
+                <div id="panel-general" class="settings-panel active">
+                    <div class="settings-card">
+                        <h3>General Settings</h3>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label>Admin Password</label>
+                                <input type="text" id="gen-password">
+                            </div>
+                            <div class="form-group">
+                                <label>Standard Shift (min)</label>
+                                <input type="number" id="gen-standard-shift">
+                            </div>
+                            <div class="form-group">
+                                <label>Overtime Shift (min)</label>
+                                <input type="number" id="gen-overtime-shift">
+                            </div>
+                            <div class="form-group">
+                                <label>Summer CURE Multiplier</label>
+                                <input type="number" step="0.1" id="gen-summer-mult">
+                            </div>
+                            <div class="form-group">
+                                <label>POUR Cutoff (min)</label>
+                                <input type="number" id="gen-pour-cutoff">
+                            </div>
+                            <div class="form-group">
+                                <label>Max LAYOUT-POUR Gap (min)</label>
+                                <input type="number" id="gen-max-gap">
+                            </div>
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn btn-save" onclick="saveGeneralSettings()">Save General Settings</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task Timings -->
+                <div id="panel-tasks" class="settings-panel">
+                    <div class="settings-card">
+                        <h3>Task Timings</h3>
+                        <div class="table-wrapper">
+                            <table class="settings-table" id="tasks-table">
+                                <thead>
+                                    <tr>
+                                        <th>Wire Dia</th><th>Equiv</th><th>Setup</th><th>Layout</th>
+                                        <th>Pour/Mold</th><th>Cure</th><th>Unload</th>
+                                        <th>Sched Const</th><th>Class</th><th>Pull Ahead</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tasks-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn btn-save" onclick="saveTaskTimings()">Save Task Timings</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Molds -->
+                <div id="panel-molds" class="settings-panel">
+                    <div class="settings-card">
+                        <h3>Molds</h3>
+                        <div class="table-wrapper">
+                            <table class="settings-table" id="molds-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th><th>Depth</th><th>Wire Dia</th><th>Qty</th>
+                                        <th>RED</th><th>BLUE</th><th>GREEN</th><th>BLACK</th><th>PURPLE</th><th>ORANGE</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="molds-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn btn-add" onclick="addMold()">+ Add Mold</button>
+                            <button class="btn btn-save" onclick="saveMolds()">Save Molds</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fixtures -->
+                <div id="panel-fixtures" class="settings-panel">
+                    <div class="settings-card">
+                        <h3>Fixtures</h3>
+                        <table class="settings-table" id="fixtures-table">
+                            <thead><tr><th>Pattern</th><th>Description</th><th>Max Concurrent</th></tr></thead>
+                            <tbody id="fixtures-body"></tbody>
+                        </table>
+                        <div class="btn-row">
+                            <button class="btn btn-save" onclick="saveFixtures()">Save Fixtures</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Holidays -->
+                <div id="panel-holidays" class="settings-panel">
+                    <div class="settings-card">
+                        <h3>Holidays / Closures</h3>
+                        <table class="settings-table" id="holidays-table">
+                            <thead><tr><th>Label</th><th>Date</th><th></th></tr></thead>
+                            <tbody id="holidays-body"></tbody>
+                        </table>
+                        <div class="btn-row">
+                            <button class="btn btn-add" onclick="addHoliday()">+ Add Holiday</button>
+                            <button class="btn btn-save" onclick="saveHolidays()">Save Holidays</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tooltip" class="tooltip" style="display:none"></div>
+
+    <script>
+        let config = null;
+        let adminPassword = null;
+        const DEFAULT_CELLS_ON = ['RED', 'BLUE', 'GREEN', 'BLACK', 'PURPLE'];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadConfig();
+            await loadJobs();
+            document.getElementById('schedule-date').value = new Date().toISOString().split('T')[0];
+        });
+
+        function showMainTab(tab) {
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.main-tab[onclick*="${tab}"]`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        function showSettingsTab(tab) {
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.settings-panel').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.settings-tab[onclick*="${tab}"]`).classList.add('active');
+            document.getElementById(`panel-${tab}`).classList.add('active');
+        }
+
+        async function unlockSettings() {
+            const password = document.getElementById('settings-password').value;
+            try {
+                const formData = new FormData();
+                formData.append('password', password);
+                const res = await fetch('/api/settings/verify', { method: 'POST', body: formData });
+                if (res.ok) {
+                    adminPassword = password;
+                    document.getElementById('settings-locked').style.display = 'none';
+                    document.getElementById('settings-unlocked').style.display = 'block';
+                    document.getElementById('password-error').style.display = 'none';
+                    loadAllSettings();
+                } else {
+                    document.getElementById('password-error').style.display = 'block';
+                }
+            } catch (e) {
+                document.getElementById('password-error').style.display = 'block';
+            }
+        }
+
+        async function loadAllSettings() {
+            await loadGeneralSettings();
+            await loadTaskTimings();
+            await loadMolds();
+            await loadFixtures();
+            await loadHolidays();
+        }
+
+        async function loadGeneralSettings() {
+            const res = await fetch('/api/settings/general', { headers: { 'X-Admin-Password': adminPassword } });
+            const data = await res.json();
+            document.getElementById('gen-password').value = data.admin_password;
+            document.getElementById('gen-standard-shift').value = data.standard_shift;
+            document.getElementById('gen-overtime-shift').value = data.overtime_shift;
+            document.getElementById('gen-summer-mult').value = data.summer_cure_multiplier;
+            document.getElementById('gen-pour-cutoff').value = data.pour_cutoff_minutes;
+            document.getElementById('gen-max-gap').value = data.max_layout_pour_gap;
+        }
+
+        async function saveGeneralSettings() {
+            const settings = {
+                admin_password: document.getElementById('gen-password').value,
+                standard_shift: parseInt(document.getElementById('gen-standard-shift').value),
+                overtime_shift: parseInt(document.getElementById('gen-overtime-shift').value),
+                summer_cure_multiplier: parseFloat(document.getElementById('gen-summer-mult').value),
+                pour_cutoff_minutes: parseInt(document.getElementById('gen-pour-cutoff').value),
+                max_layout_pour_gap: parseInt(document.getElementById('gen-max-gap').value),
+            };
+            await fetch('/api/settings/general', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+                body: JSON.stringify(settings)
+            });
+            adminPassword = settings.admin_password;
+            alert('General settings saved!');
+            loadConfig();
+        }
+
+        async function loadTaskTimings() {
+            const res = await fetch('/api/settings/tasks', { headers: { 'X-Admin-Password': adminPassword } });
+            const data = await res.json();
+            const tbody = document.getElementById('tasks-body');
+            tbody.innerHTML = data.tasks.map((t, i) => `
+                <tr>
+                    <td><input value="${t.wire_diameter}" data-field="wire_diameter"></td>
+                    <td><input value="${t.equivalent}" data-field="equivalent"></td>
+                    <td><input type="number" value="${t.setup}" data-field="setup"></td>
+                    <td><input type="number" value="${t.layout}" data-field="layout"></td>
+                    <td><input type="number" step="0.5" value="${t.pour_per_mold}" data-field="pour_per_mold"></td>
+                    <td><input type="number" value="${t.cure}" data-field="cure"></td>
+                    <td><input type="number" value="${t.unload}" data-field="unload"></td>
+                    <td><input type="number" value="${t.sched_constant}" data-field="sched_constant"></td>
+                    <td><select data-field="sched_class">
+                        ${['A','B','C','D','E'].map(c => `<option ${t.sched_class===c?'selected':''}>${c}</option>`).join('')}
+                    </select></td>
+                    <td><input type="number" step="0.25" value="${t.pull_ahead}" data-field="pull_ahead"></td>
+                </tr>
+            `).join('');
+        }
+
+        async function saveTaskTimings() {
+            const rows = document.querySelectorAll('#tasks-body tr');
+            const tasks = Array.from(rows).map(row => ({
+                wire_diameter: row.querySelector('[data-field="wire_diameter"]').value,
+                equivalent: row.querySelector('[data-field="equivalent"]').value,
+                setup: parseInt(row.querySelector('[data-field="setup"]').value),
+                layout: parseInt(row.querySelector('[data-field="layout"]').value),
+                pour_per_mold: parseFloat(row.querySelector('[data-field="pour_per_mold"]').value),
+                cure: parseInt(row.querySelector('[data-field="cure"]').value),
+                unload: parseInt(row.querySelector('[data-field="unload"]').value),
+                sched_constant: parseInt(row.querySelector('[data-field="sched_constant"]').value),
+                sched_class: row.querySelector('[data-field="sched_class"]').value,
+                pull_ahead: parseFloat(row.querySelector('[data-field="pull_ahead"]').value),
+            }));
+            await fetch('/api/settings/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+                body: JSON.stringify(tasks)
+            });
+            alert('Task timings saved!');
+        }
+
+        async function loadMolds() {
+            const res = await fetch('/api/settings/molds', { headers: { 'X-Admin-Password': adminPassword } });
+            const data = await res.json();
+            renderMoldsTable(data.molds);
+        }
+
+        function renderMoldsTable(molds) {
+            const tbody = document.getElementById('molds-body');
+            tbody.innerHTML = molds.map((m, i) => `
+                <tr>
+                    <td><input value="${m.name}" data-field="name"></td>
+                    <td><select data-field="depth"><option ${m.depth==='STD'?'selected':''}>STD</option><option ${m.depth==='DEEP'?'selected':''}>DEEP</option></select></td>
+                    <td><input value="${m.wire_diameter}" data-field="wire_diameter"></td>
+                    <td><input type="number" value="${m.quantity}" data-field="quantity"></td>
+                    <td><input type="checkbox" ${m.cells.RED?'checked':''} data-cell="RED"></td>
+                    <td><input type="checkbox" ${m.cells.BLUE?'checked':''} data-cell="BLUE"></td>
+                    <td><input type="checkbox" ${m.cells.GREEN?'checked':''} data-cell="GREEN"></td>
+                    <td><input type="checkbox" ${m.cells.BLACK?'checked':''} data-cell="BLACK"></td>
+                    <td><input type="checkbox" ${m.cells.PURPLE?'checked':''} data-cell="PURPLE"></td>
+                    <td><input type="checkbox" ${m.cells.ORANGE?'checked':''} data-cell="ORANGE"></td>
+                    <td><button class="btn-delete" onclick="this.closest('tr').remove()">x</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function addMold() {
+            const tbody = document.getElementById('molds-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input value="NEW_MOLD" data-field="name"></td>
+                <td><select data-field="depth"><option>STD</option><option>DEEP</option></select></td>
+                <td><input value="<8" data-field="wire_diameter"></td>
+                <td><input type="number" value="1" data-field="quantity"></td>
+                <td><input type="checkbox" data-cell="RED"></td>
+                <td><input type="checkbox" data-cell="BLUE"></td>
+                <td><input type="checkbox" data-cell="GREEN"></td>
+                <td><input type="checkbox" data-cell="BLACK"></td>
+                <td><input type="checkbox" data-cell="PURPLE"></td>
+                <td><input type="checkbox" data-cell="ORANGE"></td>
+                <td><button class="btn-delete" onclick="this.closest('tr').remove()">x</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        async function saveMolds() {
+            const rows = document.querySelectorAll('#molds-body tr');
+            const molds = Array.from(rows).map(row => ({
+                name: row.querySelector('[data-field="name"]').value,
+                depth: row.querySelector('[data-field="depth"]').value,
+                wire_diameter: row.querySelector('[data-field="wire_diameter"]').value,
+                quantity: parseInt(row.querySelector('[data-field="quantity"]').value),
+                cells: {
+                    RED: row.querySelector('[data-cell="RED"]').checked,
+                    BLUE: row.querySelector('[data-cell="BLUE"]').checked,
+                    GREEN: row.querySelector('[data-cell="GREEN"]').checked,
+                    BLACK: row.querySelector('[data-cell="BLACK"]').checked,
+                    PURPLE: row.querySelector('[data-cell="PURPLE"]').checked,
+                    ORANGE: row.querySelector('[data-cell="ORANGE"]').checked,
+                }
+            }));
+            await fetch('/api/settings/molds', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+                body: JSON.stringify(molds)
+            });
+            alert('Molds saved!');
+        }
+
+        async function loadFixtures() {
+            const res = await fetch('/api/settings/fixtures', { headers: { 'X-Admin-Password': adminPassword } });
+            const data = await res.json();
+            const tbody = document.getElementById('fixtures-body');
+            tbody.innerHTML = data.fixtures.map(f => `
+                <tr>
+                    <td><input value="${f.pattern}" data-field="pattern"></td>
+                    <td><input value="${f.description}" data-field="description"></td>
+                    <td><input type="number" value="${f.quantity}" data-field="quantity"></td>
+                </tr>
+            `).join('');
+        }
+
+        async function saveFixtures() {
+            const rows = document.querySelectorAll('#fixtures-body tr');
+            const fixtures = Array.from(rows).map(row => ({
+                pattern: row.querySelector('[data-field="pattern"]').value,
+                description: row.querySelector('[data-field="description"]').value,
+                quantity: parseInt(row.querySelector('[data-field="quantity"]').value),
+            }));
+            await fetch('/api/settings/fixtures', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+                body: JSON.stringify(fixtures)
+            });
+            alert('Fixtures saved!');
+        }
+
+        async function loadHolidays() {
+            const res = await fetch('/api/settings/holidays', { headers: { 'X-Admin-Password': adminPassword } });
+            const data = await res.json();
+            renderHolidaysTable(data.holidays);
+        }
+
+        function renderHolidaysTable(holidays) {
+            const tbody = document.getElementById('holidays-body');
+            tbody.innerHTML = holidays.map(h => `
+                <tr>
+                    <td><input value="${h.label}" data-field="label"></td>
+                    <td><input type="date" value="${h.date}" data-field="date"></td>
+                    <td><button class="btn-delete" onclick="this.closest('tr').remove()">x</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function addHoliday() {
+            const tbody = document.getElementById('holidays-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input value="New Holiday" data-field="label"></td>
+                <td><input type="date" value="${new Date().toISOString().split('T')[0]}" data-field="date"></td>
+                <td><button class="btn-delete" onclick="this.closest('tr').remove()">x</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        async function saveHolidays() {
+            const rows = document.querySelectorAll('#holidays-body tr');
+            const holidays = Array.from(rows).map(row => ({
+                label: row.querySelector('[data-field="label"]').value,
+                date: row.querySelector('[data-field="date"]').value,
+            }));
+            await fetch('/api/settings/holidays', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+                body: JSON.stringify(holidays)
+            });
+            alert('Holidays saved!');
+        }
+
+        // === SCHEDULER FUNCTIONS ===
+        async function loadConfig() {
+            const res = await fetch('/api/config');
+            config = await res.json();
+            document.getElementById('version-info').textContent = `v${config.version}`;
+            
+            document.getElementById('cells-group').innerHTML = config.cells.map(cell => `
+                <label class="checkbox-item cell-${cell}">
+                    <input type="checkbox" value="${cell}" ${DEFAULT_CELLS_ON.includes(cell)?'checked':''}>
+                    ${cell}
+                </label>
+            `).join('');
+            
+            document.getElementById('shift-type').innerHTML = config.shift_types.map(s => 
+                `<option value="${s.id}">${s.name}</option>`
+            ).join('');
+        }
+
+        async function handleFileUpload(file) {
+            if (!file) return;
+            const status = document.getElementById('upload-status');
+            status.innerHTML = '<div class="loading active"><div class="spinner"></div></div>';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const result = await res.json();
+                if (res.ok) {
+                    status.innerHTML = `<div class="upload-status success">[OK] ${result.message}</div>`;
+                    await loadJobs();
+                } else {
+                    status.innerHTML = `<div class="upload-status" style="background:#ffebee;color:#c62828">[ERROR] ${result.detail}</div>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<div class="upload-status" style="background:#ffebee;color:#c62828">[ERROR] Error</div>`;
+            }
+        }
+
+        async function loadJobs() {
+            const res = await fetch('/api/jobs');
+            const data = await res.json();
+            document.getElementById('jobs-count').textContent = data.jobs?.length || 0;
+            
+            if (!data.jobs?.length) {
+                document.getElementById('jobs-list').innerHTML = '<div class="empty-state">Upload a file</div>';
+                return;
+            }
+            
+            // Get active cells for ON_TABLE_TODAY dropdown
+            const activeCells = Array.from(document.querySelectorAll('#cells-group input:checked')).map(cb => cb.value);
+            const tableOptions = activeCells.flatMap(cell => [`${cell}_1`, `${cell}_2`]);
+            const tableOptionsHtml = '<option value="">Not on table</option>' + 
+                tableOptions.map(t => `<option value="${t}">${t}</option>`).join('');
+            
+            document.getElementById('jobs-list').innerHTML = data.jobs.map(job => {
+                const settings = jobSettings[job.job_id] || {};
+                const hasSettings = settings.expedite || settings.on_table_today;
+                
+                return `
+                <div class="job-item ${hasSettings ? 'has-settings' : ''}" id="job-${job.job_id.replace(/[^a-zA-Z0-9]/g, '_')}">
+                    <div class="job-header">
+                        <span class="job-id">${job.job_id}</span>
+                        <span class="job-priority priority-${job.priority}">P${job.priority} | ${job.sched_class}</span>
+                        <button class="job-toggle-btn" onclick="toggleJobSettings('${job.job_id}')">[Edit]</button>
+                    </div>
+                    <div style="color:#666;font-size:11px">${job.pattern} | ${job.molds} molds | Due: ${job.req_by} | Qty: ${job.prod_qty}</div>
+                    <div class="job-settings" id="settings-${job.job_id.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <div class="job-settings-row">
+                            <label>
+                                <input type="checkbox" ${settings.expedite ? 'checked' : ''} 
+                                    onchange="updateJobSetting('${job.job_id}', 'expedite', this.checked)">
+                                EXPEDITE
+                            </label>
+                        </div>
+                        <div class="job-settings-row">
+                            <label>
+                                ON TABLE TODAY:
+                                <select onchange="updateJobSetting('${job.job_id}', 'on_table_today', this.value); toggleQtyRemaining('${job.job_id}', this.value)">
+                                    ${tableOptionsHtml.replace(`value="${settings.on_table_today}"`, `value="${settings.on_table_today}" selected`)}
+                                </select>
+                            </label>
+                            <label id="qty-label-${job.job_id.replace(/[^a-zA-Z0-9]/g, '_')}" style="display:${settings.on_table_today ? 'flex' : 'none'}">
+                                QTY REMAINING:
+                                <input type="number" min="1" max="${job.prod_qty}" value="${settings.qty_remaining || job.prod_qty}"
+                                    onchange="updateJobSetting('${job.job_id}', 'qty_remaining', parseInt(this.value))">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+        
+        // Job settings storage
+        let jobSettings = {};
+        
+        function toggleJobSettings(jobId) {
+            const safeId = jobId.replace(/[^a-zA-Z0-9]/g, '_');
+            const settingsEl = document.getElementById('settings-' + safeId);
+            if (settingsEl) {
+                settingsEl.classList.toggle('visible');
+            }
+        }
+        
+        function updateJobSetting(jobId, key, value) {
+            if (!jobSettings[jobId]) jobSettings[jobId] = {};
+            jobSettings[jobId][key] = value;
+            
+            // Update visual indicator
+            const safeId = jobId.replace(/[^a-zA-Z0-9]/g, '_');
+            const jobEl = document.getElementById('job-' + safeId);
+            if (jobEl) {
+                const settings = jobSettings[jobId];
+                if (settings.expedite || settings.on_table_today) {
+                    jobEl.classList.add('has-settings');
+                } else {
+                    jobEl.classList.remove('has-settings');
+                }
+            }
+        }
+        
+        function toggleQtyRemaining(jobId, onTableValue) {
+            const safeId = jobId.replace(/[^a-zA-Z0-9]/g, '_');
+            const qtyLabel = document.getElementById('qty-label-' + safeId);
+            if (qtyLabel) {
+                qtyLabel.style.display = onTableValue ? 'flex' : 'none';
+            }
+        }
+
+        async function runSchedule() {
+            const btn = document.getElementById('run-btn');
+            const cells = Array.from(document.querySelectorAll('#cells-group input:checked')).map(cb => cb.value);
+            
+            if (!cells.length) { alert('Select at least one cell'); return; }
+            
+            btn.disabled = true;
+            document.getElementById('gantt-empty').style.display = 'none';
+            document.getElementById('gantt-chart').style.display = 'none';
+            document.getElementById('gantt-loading').classList.add('active');
+            
+            // Send job settings first
+            for (const [jobId, settings] of Object.entries(jobSettings)) {
+                if (settings.expedite || settings.on_table_today) {
+                    await fetch('/api/job-settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            job_id: jobId,
+                            expedite: settings.expedite || false,
+                            on_table_today: settings.on_table_today || null,
+                            qty_remaining: settings.qty_remaining || null
+                        })
+                    });
+                }
+            }
+            
+            try {
+                const res = await fetch('/api/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        schedule_date: document.getElementById('schedule-date').value,
+                        active_cells: cells,
+                        shift_type: document.getElementById('shift-type').value,
+                        summer_mode: document.getElementById('summer-mode').checked,
+                    })
+                });
+                const result = await res.json();
+                if (result.success) displayResults(result);
+                else { alert(result.message); document.getElementById('gantt-empty').style.display = 'block'; }
+            } catch (e) {
+                alert('Error: ' + e.message);
+                document.getElementById('gantt-empty').style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                document.getElementById('gantt-loading').classList.remove('active');
+            }
+        }
+
+        // Store current schedule data for method switching
+        let currentScheduleData = null;
+        let currentMethodKey = null;
+
+        function displayResults(result) {
+            currentScheduleData = result;
+            currentMethodKey = `${result.current_method}_${result.current_variant}`;
+            
+            document.getElementById('results-header').style.display = 'flex';
+            document.getElementById('stat-panels').textContent = result.total_panels;
+            document.getElementById('stat-jobs').textContent = result.jobs_scheduled;
+            document.getElementById('stat-method').textContent = `${result.current_method.replace(/_/g, ' ')} (${result.current_variant.replace(/_/g, ' ')})`;
+            
+            // Add per-cell PDF download buttons
+            const cellPdfContainer = document.getElementById('cell-pdf-buttons');
+            cellPdfContainer.innerHTML = '';
+            for (const [cell, data] of Object.entries(result.cell_breakdown)) {
+                if (data.panels > 0) {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-secondary';
+                    btn.style.fontSize = '11px';
+                    btn.style.padding = '5px 10px';
+                    btn.textContent = cell;
+                    btn.onclick = () => downloadCellPdf(cell);
+                    cellPdfContainer.appendChild(btn);
+                }
+            }
+            
+            // Build method buttons
+            if (result.method_buttons?.length > 1) {
+                const maxPanels = Math.max(...result.method_buttons.map(b => b.panels));
+                const buttonsContainer = document.getElementById('method-buttons');
+                buttonsContainer.innerHTML = '';
+                
+                for (const btn of result.method_buttons) {
+                    const button = document.createElement('button');
+                    const isActive = btn.key === currentMethodKey;
+                    const isBest = btn.panels === maxPanels && btn.status === 'OPTIMAL';
+                    
+                    button.className = `method-btn ${isActive ? 'active' : ''} ${isBest ? 'best' : ''}`;
+                    button.innerHTML = `
+                        <span class="method-name">${btn.method.replace(/_/g, ' ')}</span>
+                        <span class="method-panels">${btn.variant.replace(/_/g, ' ')} - ${btn.panels} panels</span>
+                        ${isBest ? '<span class="best-badge">BEST</span>' : ''}
+                    `;
+                    button.onclick = () => switchMethod(btn.key);
+                    buttonsContainer.appendChild(button);
+                }
+                
+                document.getElementById('method-buttons-card').style.display = 'block';
+            }
+            
+            if (result.unscheduled_jobs?.length) {
+                document.getElementById('unscheduled-list').textContent = result.unscheduled_jobs.map(j => j.job_id).join(', ');
+                document.getElementById('unscheduled-alert').style.display = 'block';
+            } else {
+                document.getElementById('unscheduled-alert').style.display = 'none';
+            }
+            
+            renderGanttChart(result.gantt_data);
+            
+            if (result.comparison_data?.length > 1) {
+                const maxPanels = Math.max(...result.comparison_data.map(d => d.panels));
+                document.getElementById('comparison-body').innerHTML = result.comparison_data.map(row => `
+                    <tr class="${row.panels === maxPanels ? 'best-row' : ''} ${row.key === currentMethodKey ? 'selected' : ''}">
+                        <td>${row.method.replace(/_/g, ' ')}</td>
+                        <td>${row.variant.replace(/_/g, ' ')}</td>
+                        <td><span class="status-badge status-${row.status}">${row.status}</span></td>
+                        <td><strong>${row.panels}</strong></td>
+                        <td>${row.jobs_scheduled}</td>
+                        <td><button class="view-btn" onclick="switchMethod('${row.key}')">View</button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('comparison-card').style.display = 'block';
+            }
+        }
+        
+        async function switchMethod(methodKey) {
+            if (methodKey === currentMethodKey) return;
+            
+            // Show loading indicator
+            document.getElementById('gantt-loading').style.display = 'flex';
+            document.getElementById('gantt-chart').style.display = 'none';
+            
+            try {
+                const response = await fetch(`/api/method/${methodKey}`);
+                if (!response.ok) throw new Error('Failed to switch method');
+                
+                const result = await response.json();
+                displayResults(result);
+            } catch (error) {
+                console.error('Error switching method:', error);
+                alert('Failed to switch method: ' + error.message);
+            } finally {
+                document.getElementById('gantt-loading').style.display = 'none';
+                document.getElementById('gantt-chart').style.display = 'block';
+            }
+        }
+
+        function renderGanttChart(ganttData) {
+            const container = document.getElementById('gantt-chart');
+            const pxPerMin = 1.4;
+            const totalWidth = ganttData.shift_minutes * pxPerMin;
+            
+            let html = `<div class="time-axis" style="width:${totalWidth}px;position:relative">`;
+            for (let t = 0; t <= ganttData.shift_minutes; t += 60) {
+                html += `<span class="time-marker" style="left:${t * pxPerMin}px">${t}</span>`;
+            }
+            html += '</div>';
+            
+            for (const [cell, cellData] of Object.entries(ganttData.cells)) {
+                html += `<div class="gantt-cell"><div class="gantt-cell-header">${cell} (${cellData.total_panels} panels)</div>`;
+                for (const [tableId, tasks] of Object.entries(cellData.tables)) {
+                    html += `<div class="gantt-row"><div class="gantt-row-label">${tableId}</div>`;
+                    html += `<div class="gantt-row-bar" style="width:${totalWidth}px">`;
+                    for (const task of tasks) {
+                        const left = task.start * pxPerMin;
+                        const width = Math.max(task.duration * pxPerMin, 2);
+                        html += `<div class="gantt-task" style="left:${left}px;width:${width}px;background:${task.color}" 
+                            onmouseenter="showTooltip(event,'${task.task}: ${task.start}-${task.end} (${task.duration}m)')"
+                            onmouseleave="hideTooltip()">${width > 18 ? task.task[0] : ''}</div>`;
+                    }
+                    html += '</div></div>';
+                }
+                html += '</div>';
+            }
+            
+            container.innerHTML = html;
+            container.style.display = 'block';
+        }
+
+        function showTooltip(e, text) {
+            const tt = document.getElementById('tooltip');
+            tt.textContent = text;
+            tt.style.display = 'block';
+            tt.style.left = (e.pageX + 10) + 'px';
+            tt.style.top = (e.pageY + 10) + 'px';
+        }
+        function hideTooltip() { document.getElementById('tooltip').style.display = 'none'; }
+        function downloadFile(type) { window.open(`/api/download/${type}`, '_blank'); }
+        function downloadCellPdf(cell) { window.open(`/api/download/cell/${cell}/pdf`, '_blank'); }
+    </script>
+</body>
+</html>
